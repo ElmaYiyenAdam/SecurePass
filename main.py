@@ -29,6 +29,7 @@ class SecurePassApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.editing_password_id = None
         database.create_table()
 
         self.title("SecurePass Manager")
@@ -131,13 +132,12 @@ class SecurePassApp(ctk.CTk):
             text_color=TEXT_MUTED
         ).pack(pady=(0, 26))
 
-        self.unlock_password_entry = self.create_input(
+        unlock_wrapper, self.unlock_password_entry = self.create_password_input_with_toggle(
             container,
             "Master Password",
-            show="•",
             width=310
         )
-        self.unlock_password_entry.pack(pady=8)
+        unlock_wrapper.pack(pady=8)
 
         self.unlock_password_entry.bind(
             "<Return>",
@@ -418,8 +418,11 @@ class SecurePassApp(ctk.CTk):
         self.username_entry = self.create_input(self.form_frame, "Username / Email")
         self.username_entry.pack(fill="x", padx=26, pady=8)
 
-        self.password_entry = self.create_input(self.form_frame, "Password", show="•")
-        self.password_entry.pack(fill="x", padx=26, pady=8)
+        password_wrapper, self.password_entry = self.create_password_input_with_toggle(
+            self.form_frame,
+            "Password"
+        )
+        password_wrapper.pack(fill="x", padx=26, pady=8)
         self.password_entry.bind("<KeyRelease>", lambda event: self.update_strength())
 
         self.strength_label = ctk.CTkLabel(self.form_frame, text="Strength: -", text_color=TEXT_MUTED, font=("Segoe UI", 12))
@@ -555,6 +558,10 @@ class SecurePassApp(ctk.CTk):
         self.set_active_nav("generator")
 
     def save_password(self):
+        if self.editing_password_id is not None:
+            database.delete_password(self.editing_password_id)
+            self.editing_password_id = None
+            self.save_button.configure(text="Save Password")
         website = self.website_entry.get().strip()
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
@@ -592,23 +599,53 @@ class SecurePassApp(ctk.CTk):
     def create_password_card(self, item):
         password_id, website, username, password, note, updated_at = item
 
-        card = ctk.CTkFrame(self.list_frame, corner_radius=20, fg_color=CARD_SOFT)
+        card = ctk.CTkFrame(
+            self.list_frame,
+            corner_radius=20,
+            fg_color=CARD_SOFT
+        )
         card.pack(fill="x", pady=9, padx=6)
 
         left = ctk.CTkFrame(card, fg_color="transparent")
         left.pack(side="left", fill="both", expand=True, padx=20, pady=16)
 
-        ctk.CTkLabel(left, text=website, font=("Segoe UI", 18, "bold"), text_color=TEXT_PRIMARY, anchor="w").pack(anchor="w")
-        ctk.CTkLabel(left, text=username, text_color=TEXT_SECONDARY, font=("Segoe UI", 13), anchor="w").pack(anchor="w", pady=(6, 0))
+        ctk.CTkLabel(
+            left,
+            text=website,
+            font=("Segoe UI", 18, "bold"),
+            text_color=TEXT_PRIMARY
+        ).pack(anchor="w")
 
-        password_label = ctk.CTkLabel(left, text="•" * len(password), text_color=TEXT_MUTED, font=("Segoe UI", 13), anchor="w")
+        ctk.CTkLabel(
+            left,
+            text=username,
+            text_color=TEXT_SECONDARY,
+            font=("Segoe UI", 13)
+        ).pack(anchor="w", pady=(6, 0))
+
+        password_label = ctk.CTkLabel(
+            left,
+            text="•" * len(password),
+            text_color=TEXT_MUTED,
+            font=("Segoe UI", 13)
+        )
         password_label.pack(anchor="w", pady=(6, 0))
 
         if note:
-            ctk.CTkLabel(left, text=note, text_color=TEXT_MUTED, font=("Segoe UI", 12), anchor="w").pack(anchor="w", pady=(6, 0))
+            ctk.CTkLabel(
+                left,
+                text=note,
+                text_color=TEXT_MUTED,
+                font=("Segoe UI", 12)
+            ).pack(anchor="w", pady=(6, 0))
 
         if updated_at:
-            ctk.CTkLabel(left, text=f"Updated {updated_at}", text_color=TEXT_MUTED, font=("Segoe UI", 12), anchor="w").pack(anchor="w", pady=(6, 0))
+            ctk.CTkLabel(
+                left,
+                text=f"Updated {updated_at}",
+                text_color=TEXT_MUTED,
+                font=("Segoe UI", 12)
+            ).pack(anchor="w", pady=(6, 0))
 
         right = ctk.CTkFrame(card, fg_color="transparent")
         right.pack(side="right", padx=18, pady=12)
@@ -621,10 +658,9 @@ class SecurePassApp(ctk.CTk):
             corner_radius=10,
             fg_color="#334155",
             hover_color="#475569",
-            text_color=TEXT_PRIMARY
+            command=lambda: self.toggle_password(password_label, password, show_button)
         )
-        show_button.configure(command=lambda: self.toggle_password(password_label, password, show_button))
-        show_button.pack(pady=4)
+        show_button.pack(pady=3)
 
         ctk.CTkButton(
             right,
@@ -634,9 +670,25 @@ class SecurePassApp(ctk.CTk):
             corner_radius=10,
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
-            text_color=TEXT_PRIMARY,
             command=lambda: self.copy_password(password)
-        ).pack(pady=4)
+        ).pack(pady=3)
+
+        ctk.CTkButton(
+            right,
+            text="Edit",
+            width=76,
+            height=32,
+            corner_radius=10,
+            fg_color="#0ea5e9",
+            hover_color="#0284c7",
+            command=lambda: self.edit_password(
+                password_id,
+                website,
+                username,
+                password,
+                note
+            )
+        ).pack(pady=3)
 
         ctk.CTkButton(
             right,
@@ -648,7 +700,24 @@ class SecurePassApp(ctk.CTk):
             hover_color=DANGER_HOVER,
             text_color="#fca5a5",
             command=lambda: self.delete_password(password_id)
-        ).pack(pady=4)
+        ).pack(pady=3)
+
+    def edit_password(self, password_id, website, username, password, note):
+        self.editing_password_id = password_id
+
+        self.website_entry.delete(0, "end")
+        self.username_entry.delete(0, "end")
+        self.password_entry.delete(0, "end")
+        self.note_entry.delete(0, "end")
+
+        self.website_entry.insert(0, website)
+        self.username_entry.insert(0, username)
+        self.password_entry.insert(0, password)
+        self.note_entry.insert(0, note)
+
+        self.save_button.configure(text="Update Password")
+
+        self.show_vault()
 
     def toggle_password(self, label, password, button):
         if "•" in label.cget("text"):
@@ -779,6 +848,50 @@ class SecurePassApp(ctk.CTk):
         self.strength_label.configure(text="Strength: -", text_color=TEXT_MUTED)
 
         self.focus()
+
+    def toggle_entry_visibility(self, entry, button):
+        if entry.cget("show") == "•":
+            entry.configure(show="")
+            button.configure(text="🙈")
+        else:
+            entry.configure(show="•")
+            button.configure(text="👁")
+    
+    def create_password_input_with_toggle(self, parent, placeholder, width=240):
+        wrapper = ctk.CTkFrame(
+            parent,
+            fg_color=INPUT_BG,
+            corner_radius=14,
+            border_width=1,
+            border_color=BORDER
+        )
+
+        entry = ctk.CTkEntry(
+            wrapper,
+            placeholder_text=placeholder,
+            show="•",
+            height=44,
+            border_width=0,
+            fg_color=INPUT_BG,
+            text_color=TEXT_PRIMARY,
+            placeholder_text_color=TEXT_MUTED,
+            font=("Segoe UI", 13)
+        )
+        entry.pack(side="left", fill="both", expand=True, padx=(10, 0))
+
+        button = ctk.CTkButton(
+            wrapper,
+            text="👁",
+            width=42,
+            height=36,
+            fg_color="transparent",
+            hover_color=CARD_SOFT,
+            text_color=TEXT_SECONDARY,
+            command=lambda: self.toggle_entry_visibility(entry, button)
+        )
+        button.pack(side="right", padx=(0, 6))
+
+        return wrapper, entry
 
 
 if __name__ == "__main__":
