@@ -100,20 +100,53 @@ class SecurePassApp(ctk.CTk):
         self.clear_window()
         self.configure(fg_color=APP_BG)
 
-        container = ctk.CTkFrame(self, width=430, height=300, corner_radius=24, fg_color=CARD_BG)
+        container = ctk.CTkFrame(
+            self,
+            width=430,
+            height=380,
+            corner_radius=24,
+            fg_color=CARD_BG
+        )
         container.pack(expand=True)
         container.pack_propagate(False)
 
-        ctk.CTkLabel(container, text="SecurePass", font=("Segoe UI", 34, "bold"), text_color=TEXT_PRIMARY).pack(pady=(55, 8))
-        ctk.CTkLabel(container, text="Unlock your password vault", font=("Segoe UI", 14), text_color=TEXT_SECONDARY).pack(pady=(0, 30))
+        ctk.CTkLabel(
+            container,
+            text="🔒 SecurePass",
+            font=("Segoe UI", 34, "bold"),
+            text_color=TEXT_PRIMARY
+        ).pack(pady=(42, 8))
 
-        self.unlock_password_entry = self.create_input(container, "Master Password", show="•", width=310)
+        ctk.CTkLabel(
+            container,
+            text="Your vault is encrypted.",
+            font=("Segoe UI", 15, "bold"),
+            text_color=TEXT_SECONDARY
+        ).pack(pady=(0, 4))
+
+        ctk.CTkLabel(
+            container,
+            text="Enter your master password to continue.",
+            font=("Segoe UI", 13),
+            text_color=TEXT_MUTED
+        ).pack(pady=(0, 26))
+
+        self.unlock_password_entry = self.create_input(
+            container,
+            "Master Password",
+            show="•",
+            width=310
+        )
         self.unlock_password_entry.pack(pady=8)
-        self.unlock_password_entry.bind("<Return>", lambda event: self.unlock_vault())
+
+        self.unlock_password_entry.bind(
+            "<Return>",
+            lambda event: self.unlock_vault()
+        )
 
         ctk.CTkButton(
             container,
-            text="Unlock",
+            text="🔓 Unlock Vault",
             width=310,
             height=46,
             corner_radius=14,
@@ -121,7 +154,14 @@ class SecurePassApp(ctk.CTk):
             hover_color=ACCENT_HOVER,
             font=("Segoe UI", 14, "bold"),
             command=self.unlock_vault
-        ).pack(pady=(28, 45))
+        ).pack(pady=(22, 16))
+
+        ctk.CTkLabel(
+            container,
+            text="Forgot your master password? Your data cannot be recovered.",
+            font=("Segoe UI", 11),
+            text_color=TEXT_MUTED
+        ).pack(pady=(4, 0))
 
     def unlock_vault(self):
         password = self.unlock_password_entry.get().strip()
