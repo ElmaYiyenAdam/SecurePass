@@ -1,6 +1,9 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
+import csv
+import json
 import random
+import shutil
 import string
 import time
 from datetime import datetime
@@ -818,9 +821,21 @@ class SecurePassApp(ctk.CTk):
         data_card = self.create_settings_card(self.settings_view, "Data")
         data_card.pack(fill="x", pady=(0, 24))
 
-        self.create_settings_action_button(data_card, "Export Database")
-        self.create_settings_action_button(data_card, "Import Database")
-        self.create_settings_action_button(data_card, "Create Backup")
+        self.create_settings_action_button(
+            data_card,
+            "Export Database",
+            self.export_database
+        )
+        self.create_settings_action_button(
+            data_card,
+            "Import Database",
+            self.import_database
+        )
+        self.create_settings_action_button(
+            data_card,
+            "Create Backup",
+            self.create_database_backup
+        )
 
         about_card = self.create_settings_card(self.settings_view, "About")
         about_card.pack(fill="x")
@@ -919,7 +934,7 @@ class SecurePassApp(ctk.CTk):
         self.record_activity()
         self.schedule_auto_lock_check()
 
-    def create_settings_action_button(self, parent, text):
+    def create_settings_action_button(self, parent, text, command):
         ctk.CTkButton(
             parent,
             text=text,
@@ -929,7 +944,7 @@ class SecurePassApp(ctk.CTk):
             hover_color=CARD_SOFT_HOVER,
             text_color=TEXT_PRIMARY,
             font=("Segoe UI", 13, "bold"),
-            command=self.show_coming_soon
+            command=command
         ).pack(fill="x", padx=26, pady=(0, 14))
 
     def create_about_item(self, parent, text):
@@ -944,8 +959,204 @@ class SecurePassApp(ctk.CTk):
             text_color=TEXT_SECONDARY
         ).pack(side="left", padx=16)
 
-    def show_coming_soon(self):
-        self.show_toast("Coming soon")
+    def create_database_backup(self):
+        default_name = datetime.now().strftime("backup_%Y_%m_%d_%H_%M_%S.db")
+        destination = filedialog.asksaveasfilename(
+            parent=self,
+            title="Create Backup",
+            initialfile=default_name,
+            defaultextension=".db",
+            filetypes=[
+                ("SQLite database", "*.db"),
+                ("All files", "*.*"),
+            ]
+        )
+
+        if not destination:
+            return
+
+        try:
+            shutil.copy2(database.DB_FILE, destination)
+        except Exception:
+            messagebox.showerror(
+                "Backup Failed",
+                "Unable to create the database backup.",
+                parent=self
+            )
+            return
+
+        self.show_toast("Backup created successfully.")
+
+    def export_database(self):
+        if self.crypto is None:
+            messagebox.showerror(
+                "Vault Locked",
+                "Unlock your vault before exporting passwords.",
+                parent=self
+            )
+            return
+
+        if not messagebox.askyesno(
+            "Export Database",
+            "Exported file will contain decrypted passwords. Continue?",
+            parent=self
+        ):
+            return
+
+        default_name = datetime.now().strftime("passwords_%Y_%m_%d_%H_%M_%S.csv")
+        destination = filedialog.asksaveasfilename(
+            parent=self,
+            title="Export Database",
+            initialfile=default_name,
+            defaultextension=".csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("JSON files", "*.json"),
+            ]
+        )
+
+        if not destination:
+            return
+
+        rows = database.get_passwords("", self.crypto)
+        records = [
+            {
+                "website": website,
+                "username": username,
+                "password": password,
+                "note": note or "",
+                "updated_at": updated_at or "",
+            }
+            for _, website, username, password, note, updated_at in rows
+        ]
+
+        try:
+            if destination.lower().endswith(".json"):
+                self.write_password_json(destination, records)
+            else:
+                self.write_password_csv(destination, records)
+        except Exception:
+            messagebox.showerror(
+                "Export Failed",
+                "Unable to export password records.",
+                parent=self
+            )
+            return
+
+        self.show_toast("Database exported successfully.")
+
+    def import_database(self):
+        if self.crypto is None:
+            messagebox.showerror(
+                "Vault Locked",
+                "Unlock your vault before importing passwords.",
+                parent=self
+            )
+            return
+
+        source = filedialog.askopenfilename(
+            parent=self,
+            title="Import Database",
+            filetypes=[
+                ("CSV and JSON files", ("*.csv", "*.json")),
+                ("CSV files", "*.csv"),
+                ("JSON files", "*.json"),
+            ]
+        )
+
+        if not source:
+            return
+
+        try:
+            if source.lower().endswith(".json"):
+                records = self.read_password_json(source)
+            else:
+                records = self.read_password_csv(source)
+
+            imported_count = self.save_imported_password_records(records)
+        except Exception:
+            messagebox.showerror(
+                "Import Failed",
+                "Unable to import password records.",
+                parent=self
+            )
+            return
+
+        if imported_count == 0:
+            messagebox.showerror(
+                "Import Failed",
+                "No valid password records were found.",
+                parent=self
+            )
+            return
+
+        self.search_entry.delete(0, "end")
+        self.load_passwords()
+        self.update_dashboard()
+        self.show_toast("Database imported successfully.")
+
+    def write_password_csv(self, destination, records):
+        fieldnames = ["website", "username", "password", "note", "updated_at"]
+
+        with open(destination, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(records)
+
+    def write_password_json(self, destination, records):
+        with open(destination, "w", encoding="utf-8") as file:
+            json.dump(records, file, indent=2)
+
+    def read_password_csv(self, source):
+        with open(source, "r", newline="", encoding="utf-8-sig") as file:
+            return list(csv.DictReader(file))
+
+    def read_password_json(self, source):
+        with open(source, "r", encoding="utf-8-sig") as file:
+            data = json.load(file)
+
+        if isinstance(data, dict):
+            data = data.get("passwords", [])
+
+        if not isinstance(data, list):
+            raise ValueError("Imported JSON must contain a list of records.")
+
+        return data
+
+    def save_imported_password_records(self, records):
+        imported_count = 0
+        current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+
+            website = str(record.get("website", "")).strip()
+            username = str(record.get("username", "")).strip()
+            password = (
+                "" if record.get("password") is None
+                else str(record.get("password"))
+            )
+            note = "" if record.get("note") is None else str(record.get("note"))
+            updated_at = str(record.get("updated_at", "") or "").strip()
+
+            if not updated_at:
+                updated_at = current_timestamp
+
+            if not website or not username or not password:
+                continue
+
+            database.add_or_update_password(
+                website,
+                username,
+                password,
+                note,
+                updated_at,
+                self.crypto
+            )
+            imported_count += 1
+
+        return imported_count
 
     def open_change_master_password_modal(self):
         if hasattr(self, "change_password_modal") and self.change_password_modal.winfo_exists():
