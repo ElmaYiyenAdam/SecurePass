@@ -16,22 +16,6 @@ Secure • Offline • Encrypted • Beautiful
 
 ---
 
-# 🎥 Demo
-
-> **Coming Soon**
-
-Place a short GIF here demonstrating:
-
-* Unlock Vault
-* Dashboard
-* Add Password
-* Password Generator
-* Security Score
-* Dark / Light Theme
-* Settings
-
----
-
 # 📖 About
 
 SecurePass is a modern desktop password manager focused on security, privacy, and usability.
