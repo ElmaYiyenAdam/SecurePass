@@ -43,6 +43,23 @@ TEXT_ON_ACCENT = "#ffffff"
 ACCENT = "#7c3aed"
 ACCENT_HOVER = "#6d28d9"
 
+PASSWORD_HEALTH_STYLES = {
+    "Strong": {
+        "bg": ("#dcfce7", "#052e16"),
+        "text": ("#166534", "#86efac"),
+        "reason": "Good password strength",
+    },
+    "Medium": {
+        "bg": ("#ffedd5", "#431407"),
+        "text": ("#c2410c", "#fdba74"),
+        "reason": "Could be stronger",
+    },
+    "Weak": {
+        "bg": ("#fee2e2", "#450a0a"),
+        "text": ("#b91c1c", "#fca5a5"),
+    },
+}
+
 DANGER_HOVER = ("#fee2e2", "#991b1b")
 DANGER_TEXT = ("#b91c1c", "#fca5a5")
 BORDER = ("#cbd5e1", "#334155")
@@ -1373,6 +1390,37 @@ class SecurePassApp(ctk.CTk):
         for item in passwords:
             self.create_password_card(item)
 
+    def get_password_health(self, password):
+        score = self.calculate_strength(password)
+
+        if score >= 4:
+            level = "Strong"
+        elif score == 3:
+            level = "Medium"
+        else:
+            level = "Weak"
+
+        style = PASSWORD_HEALTH_STYLES[level]
+        reason = style.get("reason")
+
+        if reason is None:
+            weak_reasons = []
+
+            if len(password) < 8:
+                weak_reasons.append("too short")
+            if not any(c in "!@#$%^&*" for c in password):
+                weak_reasons.append("missing symbols")
+            if not any(c.isdigit() for c in password):
+                weak_reasons.append("missing numbers")
+            if not any(c.isupper() for c in password):
+                weak_reasons.append("missing uppercase")
+            if not any(c.islower() for c in password):
+                weak_reasons.append("missing lowercase")
+
+            reason = ", ".join(weak_reasons[:2]).capitalize() if weak_reasons else "Needs more variety"
+
+        return level, style["bg"], style["text"], reason
+
     def create_password_card(self, item):
         password_id, website, username, password, note, updated_at = item
 
@@ -1407,6 +1455,26 @@ class SecurePassApp(ctk.CTk):
             font=("Segoe UI", 13)
         )
         password_label.pack(anchor="w", pady=(6, 0))
+
+        health_label, health_bg, health_text, health_reason = self.get_password_health(password)
+
+        ctk.CTkLabel(
+            left,
+            text=health_label,
+            width=74,
+            height=24,
+            corner_radius=12,
+            fg_color=health_bg,
+            text_color=health_text,
+            font=("Segoe UI", 11, "bold")
+        ).pack(anchor="w", pady=(10, 0))
+
+        ctk.CTkLabel(
+            left,
+            text=health_reason,
+            text_color=health_text,
+            font=("Segoe UI", 12)
+        ).pack(anchor="w", pady=(4, 0))
 
         if note:
             ctk.CTkLabel(
