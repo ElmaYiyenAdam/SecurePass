@@ -630,7 +630,12 @@ class SecurePassApp(ctk.CTk):
             text_color=TEXT_MUTED
         ).pack(anchor="w", padx=26, pady=(0, 24))
 
-        self.dashboard_summary_frame = ctk.CTkFrame(bottom, fg_color="transparent")
+        self.dashboard_summary_frame = ctk.CTkScrollableFrame(
+            bottom,
+            fg_color="transparent",
+            scrollbar_button_color=CARD_SOFT,
+            scrollbar_button_hover_color=CARD_SOFT_HOVER
+        )
         self.dashboard_summary_frame.pack(fill="both", expand=True, padx=26, pady=(0, 24))
 
     def create_stat_card(self, parent, title, value, accent_color):
@@ -663,6 +668,7 @@ class SecurePassApp(ctk.CTk):
 
         total = len(rows)
         strong = 0
+        medium = 0
         weak = 0
 
         accounts_by_password = {}
@@ -683,6 +689,8 @@ class SecurePassApp(ctk.CTk):
             score = self.calculate_strength(password)
             if score >= 4:
                 strong += 1
+            elif score == 3:
+                medium += 1
             elif score <= 2:
                 weak += 1
 
@@ -708,6 +716,7 @@ class SecurePassApp(ctk.CTk):
                 text_color=TEXT_MUTED,
                 font=("Segoe UI", 15)
             ).pack(anchor="w", pady=10)
+            self.create_password_strength_section(strong, medium, weak, total)
             self.create_expiring_passwords_section(passwords_needing_update)
             self.create_favorites_section(favorites)
             self.create_reused_password_section(reused_groups)
@@ -733,14 +742,64 @@ class SecurePassApp(ctk.CTk):
 
         ctk.CTkLabel(
             self.dashboard_summary_frame,
-            text=f"{strong} strong passwords, {weak} weak passwords, {reused} reused password entries.",
+            text=f"{strong} strong passwords, {medium} medium passwords, {weak} weak passwords, {reused} reused password entries.",
             text_color=TEXT_SECONDARY,
             font=("Segoe UI", 14)
         ).pack(anchor="w")
 
+        self.create_password_strength_section(strong, medium, weak, total)
         self.create_expiring_passwords_section(passwords_needing_update)
         self.create_favorites_section(favorites)
         self.create_reused_password_section(reused_groups)
+
+    def create_password_strength_section(self, strong, medium, weak, total):
+        ctk.CTkFrame(
+            self.dashboard_summary_frame,
+            height=1,
+            fg_color=BORDER
+        ).pack(fill="x", pady=(22, 18))
+
+        chart_card = ctk.CTkFrame(
+            self.dashboard_summary_frame,
+            corner_radius=18,
+            fg_color=CARD_SOFT
+        )
+        chart_card.pack(fill="x")
+
+        ctk.CTkLabel(
+            chart_card,
+            text="Password Strength",
+            text_color=TEXT_PRIMARY,
+            font=("Segoe UI", 18, "bold")
+        ).pack(anchor="w", padx=18, pady=(16, 14))
+
+        for label, count, color in [
+            ("Strong", strong, "#22c55e"),
+            ("Medium", medium, "#f59e0b"),
+            ("Weak", weak, "#ef4444"),
+        ]:
+            self.create_strength_chart_row(chart_card, label, count, total, color)
+
+    def create_strength_chart_row(self, parent, label, count, total, color):
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", padx=18, pady=(0, 14))
+
+        ctk.CTkLabel(
+            row,
+            text=f"{label} {count}",
+            text_color=TEXT_PRIMARY,
+            font=("Segoe UI", 14, "bold")
+        ).pack(anchor="w", pady=(0, 7))
+
+        progress = ctk.CTkProgressBar(
+            row,
+            height=10,
+            corner_radius=8,
+            fg_color=CARD_BG,
+            progress_color=color
+        )
+        progress.pack(fill="x")
+        progress.set(0 if total == 0 else count / total)
 
     def create_expiring_passwords_section(self, passwords_needing_update):
         ctk.CTkFrame(
