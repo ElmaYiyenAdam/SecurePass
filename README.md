@@ -16,7 +16,7 @@ Secure • Offline • Encrypted • Beautiful
 
 ---
 
-# 📖 About
+# About
 
 SecurePass is a modern desktop password manager focused on security, privacy, and usability.
 
@@ -26,10 +26,10 @@ The application includes password health analysis, password exposure checking, a
 
 ---
 
-# ✨ Features
+# Features
 
 
-## 🔒 Security
+## Security
 
 * Master Password Authentication
 * Fernet Encryption
@@ -43,7 +43,7 @@ The application includes password health analysis, password exposure checking, a
 
 ---
 
-## 📊 Dashboard
+## Dashboard
 
 * Security Score
 * Password Statistics
@@ -55,7 +55,7 @@ The application includes password health analysis, password exposure checking, a
 
 ---
 
-## 🎲 Password Generator
+## Password Generator
 
 Generate secure passwords with configurable options.
 
@@ -70,7 +70,7 @@ Features include:
 
 ---
 
-## ⚙ Settings
+## Settings
 
 * Dark/Light Theme
 * Auto Lock
@@ -80,7 +80,7 @@ Features include:
 
 ---
 
-# 📸 Screenshots
+# Screenshots
 
 ## Dashboard
 
@@ -114,7 +114,7 @@ Features include:
 
 ---
 
-# 🛡 Security
+# Security
 
 SecurePass was designed with security as the highest priority.
 
@@ -137,7 +137,7 @@ This means:
 
 ---
 
-# 📈 Security Audit
+# Security Audit
 
 SecurePass continuously analyzes your vault.
 
@@ -153,7 +153,7 @@ Everything runs **locally** except optional password exposure checks.
 
 ---
 
-# 🛠 Tech Stack
+# Tech Stack
 
 | Technology            | Purpose                    |
 | --------------------- | -------------------------- |
@@ -166,7 +166,7 @@ Everything runs **locally** except optional password exposure checks.
 
 ---
 
-# 🚀 Installation
+# Installation
 
 Clone the repository:
 
@@ -194,9 +194,9 @@ python main.py
 
 ---
 
-# 🗺 Roadmap
+# Roadmap
 
-## ✅ Completed
+## Completed
 
 * Dashboard
 * Password Generator
@@ -215,7 +215,7 @@ python main.py
 
 ---
 
-## 🚧 Planned
+## Planned
 
 * Browser Extension
 * Mobile Companion App
@@ -225,7 +225,7 @@ python main.py
 
 ---
 
-# 🤝 Contributing
+# Contributing
 
 Contributions, issues, and feature requests are welcome.
 
@@ -233,7 +233,7 @@ Feel free to open an issue or submit a pull request.
 
 ---
 
-# 📄 License
+# License
 
 This project is licensed under the MIT License.
 
